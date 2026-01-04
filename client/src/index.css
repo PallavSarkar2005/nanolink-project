@@ -1,0 +1,5 @@
+@import "tailwindcss";
+
+/* In v4, you can also manually define source paths if auto-detection fails */
+@source "../index.html";
+@source "./**/*.{js,jsx,ts,tsx}";
