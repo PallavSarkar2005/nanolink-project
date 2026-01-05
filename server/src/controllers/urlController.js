@@ -1,57 +1,120 @@
-import Url from "../models/Url.js";
-import { nanoid } from "nanoid";
-import validUrl from "valid-url";
+import { nanoid } from 'nanoid';
+import validUrl from 'valid-url';
+import Url from '../models/Url.js';
 
-// 1. SHORTEN URL
 export const shortenUrl = async (req, res) => {
-  const { longUrl } = req.body;
+  let { longUrl, customAlias } = req.body;
   const baseUrl = process.env.BASE_URL || "http://localhost:5000";
 
-  if (!validUrl.isUri(baseUrl)) {
-    return res.status(401).json("Invalid base URL");
+  if (!longUrl) return res.status(400).json({ message: "No URL provided" });
+  
+  longUrl = longUrl.trim();
+  if (!validUrl.isUri(longUrl)) {
+    return res.status(400).json({ message: "Invalid URL format" });
   }
 
-  // Create url code
-  const urlCode = nanoid(8);
+  if (longUrl.includes(baseUrl) || longUrl.includes("localhost:5000")) {
+    return res.status(400).json({ message: "Cannot shorten a link from this domain." });
+  }
 
-  if (validUrl.isUri(longUrl)) {
-    try {
-      // Check if URL already exists for THIS user? 
-      // (Optional: For now, we create a new one every time)
+  let urlCode;
 
-      const shortUrl = `${baseUrl}/${urlCode}`;
-
-      const url = new Url({
-        longUrl,
-        shortUrl,
-        urlCode,
-        user: req.user ? req.user.id : null, // <--- SAVE USER ID HERE
-        date: new Date()
-      });
-
-      await url.save();
-      res.json(url);
-
-    } catch (err) {
-      console.error(err);
-      res.status(500).json("Server Error");
+  if (customAlias) {
+    customAlias = customAlias.trim().replace(/ /g, "-");
+    
+    const existingAlias = await Url.findOne({ urlCode: customAlias });
+    if (existingAlias) {
+      return res.status(400).json({ message: "Alias is already taken! Try another." });
     }
+    
+    urlCode = customAlias;
   } else {
-    res.status(401).json("Invalid long URL");
+    urlCode = nanoid(8);
+  }
+
+  try {
+    const shortUrl = `${baseUrl}/${urlCode}`;
+
+    const url = new Url({
+      longUrl,
+      shortUrl,
+      urlCode,
+      user: req.user ? req.user.id : null,
+      date: new Date()
+    });
+
+    await url.save();
+    res.json(url);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server Error" });
   }
 };
 
-// 2. GET USER'S LINKS (For Dashboard)
 export const getMyLinks = async (req, res) => {
   try {
-    // If no user is logged in, return empty
-    if (!req.user) return res.json([]);
-
-    // Find links belonging to this user
-    const urls = await Url.find({ user: req.user.id }).sort({ date: -1 });
-    res.json(urls);
+    const links = await Url.find({ user: req.user.id }).sort({ date: -1 });
+    res.json(links);
   } catch (err) {
     console.error(err);
-    res.status(500).json("Server Error");
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
+export const deleteUrl = async (req, res) => {
+  try {
+    const linkId = req.params.id;
+    const userId = req.user.id; // From Auth Middleware
+
+    console.log(`🗑️ Attempting to delete Link ID: ${linkId}`);
+    console.log(`👤 Requested by User ID: ${userId}`);
+
+    const url = await Url.findById(linkId);
+
+    if (!url) {
+      console.log("❌ Error: Link not found in Database");
+      return res.status(404).json({ message: "URL not found" });
+    }
+
+    // Safety Check: Does this link even have an owner?
+    if (!url.user) {
+      console.log("❌ Error: This is a Guest Link (Cannot delete)");
+      return res.status(401).json({ message: "Cannot delete public links" });
+    }
+
+    console.log(`🔗 Link Owner ID: ${url.user.toString()}`);
+
+    // Check ownership
+    if (url.user.toString() !== userId) {
+      console.log("❌ Error: User IDs do not match! (Unauthorized)");
+      return res.status(401).json({ message: "Not authorized to delete this" });
+    }
+
+    await url.deleteOne();
+    console.log("✅ Success: Link Deleted");
+    res.json({ message: "URL removed" });
+    
+  } catch (err) {
+    console.error("💥 SERVER CRASH:", err.message);
+    res.status(500).json({ message: "Server Error: " + err.message });
+  }
+};
+
+export const redirectUrl = async (req, res) => {
+  try {
+    const { code } = req.params;
+    const url = await Url.findOne({ urlCode: code });
+
+    if (url) {
+      url.clicks++;
+      await url.save();
+      return res.redirect(url.longUrl);
+    } else {
+      return res.status(404).json({ message: "No URL found" });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server Error" });
   }
 };

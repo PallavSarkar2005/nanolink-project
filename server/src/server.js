@@ -20,7 +20,7 @@ app.use(express.json());
 app.use(
   cors({
     origin: process.env.CLIENT_URL || "http://localhost:5173",
-    methods: ["GET", "POST"],
+    methods: ["GET", "POST", "DELETE"], 
     credentials: true,
   })
 );
@@ -48,7 +48,7 @@ const connectDB = async () => {
 connectDB();
 
 app.use("/api/auth", authRouter);
-app.use("/api/url", urlRouter);
+app.use("/api/urls", urlRouter);
 app.use("/", indexRouter);
 
 

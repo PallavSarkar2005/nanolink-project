@@ -1,80 +1,123 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { Toaster } from "react-hot-toast";
 import toast from "react-hot-toast";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import MainContent from "./components/MainContent";
 import AuthModal from "./components/AuthModal";
-import { shortenUrl } from "./api/urlApi";
+import { AuthContext } from "./context/AuthContext";
+import axios from "axios";
 
 function App() {
   const [url, setUrl] = useState("");
+  const [customAlias, setCustomAlias] = useState("");
   const [loading, setLoading] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [usageCount, setUsageCount] = useState(0);
-  const [history, setHistory] = useState(() => {
-    try {
-      const saved = localStorage.getItem("nanolink_history");
-      if (!saved || saved === "undefined") return [];
-      return JSON.parse(saved);
-    } catch (e) {
-      return [];
-    }
-  });
+  const [history, setHistory] = useState([]);
 
+  // 1. Get the Token from Context
+  const { user, token } = useContext(AuthContext);
+
+  // 2. Fetch Links (Auto-Authenticates via Headers usually, or we add it)
   useEffect(() => {
-    localStorage.setItem("nanolink_history", JSON.stringify(history));
-  }, [history]);
+    const fetchLinks = async () => {
+      if (user && token) {
+        try {
+          // Note: If your axios is not globally configured, we need headers here too usually.
+          // But for now, let's assume getMyLinks works because it's a GET request
+          // likely handled by global headers or simple cookie logic if you used cookies.
+          // If GET works, we leave it. If GET fails, we add headers here too.
+          const res = await axios.get("http://localhost:5000/api/urls/my-links", {
+            headers: { Authorization: `Bearer ${token}` } // <--- Added Header just in case
+          });
+          setHistory(res.data);
+        } catch (err) {
+          console.error("Failed to fetch links");
+        }
+      } else {
+        setHistory([]);
+      }
+    };
+
+    fetchLinks();
+  }, [user, token]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (usageCount >= 5) {
-      setShowAuthModal(true);
-      return;
-    }
     if (!url) return toast.error("Please paste a link first!");
 
-    const urlPattern = new RegExp(
-      "^(https?:\\/\\/)?" +
-        "((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|" +
-        "((\\d{1,3}\\.){3}\\d{1,3}))" +
-        "(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*" +
-        "(\\?[;&a-z\\d%_.~+=-]*)?" +
-        "(\\#[-a-z\\d_]*)?$",
-      "i"
-    );
+    // Basic Validation
+    let formattedUrl = url.trim();
+    if (!/^https?:\/\//i.test(formattedUrl)) {
+       formattedUrl = 'https://' + formattedUrl;
+    }
+    try {
+        new URL(formattedUrl);
+    } catch (err) {
+        return toast.error("Invalid URL. Please check spelling.");
+    }
 
-    if (!urlPattern.test(url)) return toast.error("Please enter a valid URL");
     setLoading(true);
     try {
-      const data = await shortenUrl(url);
-      setHistory((prev) => {
-        const filtered = prev.filter((item) => item.longUrl !== url);
-        return [data, ...filtered].slice(0, 5);
-      });
-      setUsageCount((prev) => prev + 1);
-      toast.success("Link shortened successfully!");
+      // 3. Create Link (Needs Header if protected, or public if not)
+      // We will add the header just to be safe if the user is logged in
+      const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+      
+      const res = await axios.post('http://localhost:5000/api/urls/shorten', { 
+        longUrl: formattedUrl,
+        customAlias: customAlias 
+      }, config);
+      
+      setHistory((prev) => [res.data, ...prev]);
       setUrl("");
+      setCustomAlias("");
+      toast.success("Link shortened successfully!");
+      
     } catch (err) {
-      toast.error(err.message || "Server is offline.");
+      toast.error(err.response?.data?.message || "Server is offline.");
     } finally {
       setLoading(false);
     }
   };
 
-  const clearHistory = () => {
-    if (window.confirm("Clear your link history?")) {
-      setHistory([]);
-      localStorage.removeItem("nanolink_history");
-      toast.success("History cleared");
+  // 4. DELETE LINK (The Fix)
+  const handleDelete = async (id) => {
+    if(!id) return;
+    if(!confirm("Are you sure you want to delete this link?")) return;
+
+    // --- DEBUGGING ---
+    console.log("Deleting ID:", id);
+    console.log("Using Token:", token); 
+    // If token is null in console, you need to Login again!
+
+    try {
+      // THE FIX: We explicitly send the token here 👇
+      await axios.delete(`http://localhost:5000/api/urls/${id}`, {
+        headers: {
+            Authorization: `Bearer ${token}` 
+        }
+      });
+
+      // Remove from UI
+      setHistory((prev) => prev.filter((link) => link._id !== id));
+      toast.success("Link deleted!");
+
+    } catch (err) {
+      console.error("Delete Error:", err);
+      // Show the exact reason from the server
+      toast.error(err.response?.data?.message || "Failed to delete link");
     }
+  };
+
+  const clearHistory = () => {
+    setHistory([]);
+    toast.success("History cleared locally");
   };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 flex flex-col font-sans selection:bg-indigo-500/30 overflow-x-hidden">
-      {/* Toast Notification Config */}
       <Toaster
-        position="top-center"
+        position="bottom-center"
         toastOptions={{
           style: {
             background: "#0f172a",
@@ -86,12 +129,16 @@ function App() {
       />
 
       <Navbar onAuthClick={() => setShowAuthModal(true)} />
+      
       <MainContent
         url={url}
         setUrl={setUrl}
+        customAlias={customAlias}
+        setCustomAlias={setCustomAlias}
         loading={loading}
         handleSubmit={handleSubmit}
         history={history}
+        handleDelete={handleDelete}
         clearHistory={clearHistory}
       />
 

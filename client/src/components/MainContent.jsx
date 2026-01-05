@@ -8,7 +8,6 @@ import Pricing from './Pricing';
 import FAQ from './FAQ';
 import CTA from './CTA';
 
-
 const sectionVariants = {
   hidden: { opacity: 0, y: 40 },
   visible: { 
@@ -21,10 +20,13 @@ const sectionVariants = {
 const MainContent = ({ 
   url, 
   setUrl, 
+  customAlias,
+  setCustomAlias,
   loading, 
   handleSubmit, 
   history, 
-  clearHistory 
+  clearHistory,
+  handleDelete 
 }) => {
   return (
     <main className="flex-grow flex flex-col items-center relative">
@@ -63,27 +65,45 @@ const MainContent = ({
           transition={{ delay: 0.3, duration: 0.6 }}
           className="w-full max-w-3xl mx-auto mb-20"
         >
-          <form onSubmit={handleSubmit} className="relative group">
-            <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none text-slate-500 group-focus-within:text-indigo-500 transition-colors z-10">
-              <Link2 size={22} />
+          <form onSubmit={handleSubmit} className="relative group flex flex-col md:flex-row gap-4">
+            
+            <div className="relative flex-grow">
+              <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none text-slate-500 z-10">
+                <Link2 size={22} />
+              </div>
+              <input
+                type="url"
+                placeholder="Paste your long link here..."
+                className="w-full h-16 md:h-20 pl-16 pr-6 rounded-2xl bg-[#0f172a] border border-slate-800 text-white text-lg outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all shadow-xl"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+              />
             </div>
-            <input
-              type="url"
-              placeholder="Paste your long link here..."
-              className="w-full h-20 pl-16 pr-44 rounded-2xl bg-[#0f172a] border border-slate-800 text-white text-lg md:text-xl outline-none transition-all duration-300 focus:border-indigo-500 focus:ring-[6px] focus:ring-indigo-500/10 shadow-2xl"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-            />
+
+            <div className="relative w-full md:w-48">
+              <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-slate-500 z-10">
+                <span className="font-bold text-sm">/</span>
+              </div>
+              <input
+                type="text"
+                placeholder="alias"
+                className="w-full h-16 md:h-20 pl-8 pr-4 rounded-2xl bg-[#0f172a] border border-slate-800 text-white text-lg outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all shadow-xl"
+                value={customAlias}
+                onChange={(e) => setCustomAlias(e.target.value)}
+                maxLength={20}
+              />
+            </div>
+
             <button
               disabled={loading}
-              className="absolute right-3 top-3 bottom-3 bg-indigo-600 hover:bg-indigo-500 px-8 rounded-xl text-white font-bold text-base md:text-lg transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2 shadow-lg"
+              className="h-16 md:h-20 bg-indigo-600 hover:bg-indigo-500 px-8 rounded-2xl text-white font-bold text-lg transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg min-w-[140px]"
             >
               {loading ? (
-                <RefreshCw className="animate-spin" size={20} />
+                <RefreshCw className="animate-spin" size={24} />
               ) : (
                 <>
                   <span>Shorten</span>
-                  <Scissors size={18} className="hidden md:block" />
+                  <Scissors size={20} className="hidden md:block" />
                 </>
               )}
             </button>
@@ -121,7 +141,11 @@ const MainContent = ({
           variants={sectionVariants}
           className="flex justify-center"
         >
-          <LinkHistory history={history} onClear={clearHistory} />
+          <LinkHistory 
+            history={history} 
+            onClear={clearHistory} 
+            onDelete={handleDelete} 
+          />
         </motion.div>
       </section>
 
