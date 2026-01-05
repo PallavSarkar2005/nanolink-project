@@ -1,29 +1,23 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 const urlSchema = new mongoose.Schema({
-  urlCode: {
-    type: String,
-    required: true,
-    unique: true
+  urlCode: String,
+  longUrl: String,
+  shortUrl: String,
+  clicks: { 
+    type: Number, 
+    default: 0 
   },
-  longUrl: {
-    type: String,
-    required: true
+  // NEW FIELD: Owner of the link
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    default: null // Null means "Guest Link"
   },
-  shortUrl: {
-    type: String,
-    required: true
-  },
-  clicks: {
-    type: Number,
-    required: true,
-    default: 0
-  },
-  date: {
-    type: Date,
-    default: Date.now
+  date: { 
+    type: String, 
+    default: Date.now 
   }
 });
 
-
-export default mongoose.model('Url', urlSchema);
+export default mongoose.model("Url", urlSchema);

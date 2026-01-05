@@ -7,6 +7,7 @@ import morgan from "morgan";
 import { rateLimit } from "express-rate-limit";
 import urlRouter from "./routes/urlRoutes.js";
 import indexRouter from "./routes/index.js";
+import authRouter from "./routes/authRoutes.js";
 
 dotenv.config();
 
@@ -16,7 +17,6 @@ const PORT = process.env.PORT || 5000;
 app.use(helmet());
 app.use(morgan("dev"));
 app.use(express.json());
-
 app.use(
   cors({
     origin: process.env.CLIENT_URL || "http://localhost:5173",
@@ -47,8 +47,11 @@ const connectDB = async () => {
 
 connectDB();
 
+app.use("/api/auth", authRouter);
 app.use("/api/url", urlRouter);
 app.use("/", indexRouter);
+
+
 
 app.listen(PORT, () => {
   console.log(`🚀 Server is running on port ${PORT}`);
