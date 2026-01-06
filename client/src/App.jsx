@@ -22,7 +22,7 @@ function App() {
     topLinkClicks: 0
   });
 
-  const { user, token } = useContext(AuthContext);
+  const { user, token, logout } = useContext(AuthContext);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -30,13 +30,16 @@ function App() {
         try {
           const config = { headers: { Authorization: `Bearer ${token}` } };
           
-          const linksRes = await axios.get("http://localhost:5000/api/urls/my-links", config);
+          const linksRes = await axios.get("https://nanolink-api.onrender.com/api/urls/my-links", config);
           setHistory(linksRes.data);
 
-          const statsRes = await axios.get("http://localhost:5000/api/urls/stats", config);
+          const statsRes = await axios.get("https://nanolink-api.onrender.com/api/urls/stats", config);
           setStats(statsRes.data);
 
         } catch (err) {
+          if (err.response && err.response.status === 401) {
+            if (logout) logout();
+          }
           console.error("Failed to fetch data");
         }
       } else {
@@ -46,7 +49,7 @@ function App() {
     };
 
     fetchData();
-  }, [user, token]);
+  }, [user, token, logout]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -66,7 +69,7 @@ function App() {
     try {
       const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
       
-      const res = await axios.post('http://localhost:5000/api/urls/shorten', { 
+      const res = await axios.post('https://nanolink-api.onrender.com/api/urls/shorten', { 
         longUrl: formattedUrl,
         customAlias: customAlias 
       }, config);
@@ -80,7 +83,12 @@ function App() {
       toast.success("Link shortened successfully!");
       
     } catch (err) {
-      toast.error(err.response?.data?.message || "Server is offline.");
+      if (err.response && err.response.status === 401) {
+        toast.error("Session expired. Please login again.");
+        if (logout) logout();
+      } else {
+        toast.error(err.response?.data?.message || "Server is offline.");
+      }
     } finally {
       setLoading(false);
     }
@@ -91,7 +99,7 @@ function App() {
     if(!confirm("Are you sure you want to delete this link?")) return;
 
     try {
-      await axios.delete(`http://localhost:5000/api/urls/${id}`, {
+      await axios.delete(`https://nanolink-api.onrender.com/api/urls/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -102,8 +110,13 @@ function App() {
       toast.success("Link deleted!");
 
     } catch (err) {
-      console.error("Delete Error:", err);
-      toast.error(err.response?.data?.message || "Failed to delete link");
+      if (err.response && err.response.status === 401) {
+        toast.error("Session expired.");
+        if (logout) logout();
+      } else {
+        console.error("Delete Error:", err);
+        toast.error(err.response?.data?.message || "Failed to delete link");
+      }
     }
   };
 

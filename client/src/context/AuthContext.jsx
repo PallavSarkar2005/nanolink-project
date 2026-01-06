@@ -9,10 +9,8 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem("token"));
   const [loading, setLoading] = useState(true);
 
-  // Configure Axios defaults
-  axios.defaults.baseURL = "http://localhost:5000/api";
+  axios.defaults.baseURL = "https://nanolink-api.onrender.com/api";
 
-  // Check login status on refresh
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser && token) {
@@ -22,7 +20,6 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, [token]);
 
-  // REGISTER
   const register = async (username, email, password) => {
     try {
       const res = await axios.post("/auth/register", { username, email, password });
@@ -41,7 +38,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // LOGIN
   const login = async (email, password) => {
     try {
       const res = await axios.post("/auth/login", { email, password });
@@ -60,7 +56,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // LOGOUT
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
