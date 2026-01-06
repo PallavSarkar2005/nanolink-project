@@ -1,7 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Link2, RefreshCw, MousePointerClick, Globe, BarChart3, Scissors } from 'lucide-react';
-import StatsCard from './StatsCard';
+import { Link2, RefreshCw, MousePointerClick, TrendingUp, Scissors } from 'lucide-react';
 import LinkHistory from './LinkHistory';
 import Features from './Features';
 import Pricing from './Pricing';
@@ -26,7 +25,8 @@ const MainContent = ({
   handleSubmit, 
   history, 
   clearHistory,
-  handleDelete 
+  handleDelete,
+  stats 
 }) => {
   return (
     <main className="flex-grow flex flex-col items-center relative">
@@ -117,21 +117,41 @@ const MainContent = ({
           variants={sectionVariants}
           className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16"
         >
-          <StatsCard 
-            icon={MousePointerClick} 
-            label="Total Clicks" 
-            value={history.length > 0 ? "4.2k" : "0"} 
-          />
-          <StatsCard 
-            icon={Globe} 
-            label="Top Region" 
-            value={history.length > 0 ? "US / EU" : "N/A"} 
-          />
-          <StatsCard 
-            icon={BarChart3} 
-            label="Avg. CTR" 
-            value={history.length > 0 ? "18.4%" : "0%"} 
-          />
+          <motion.div 
+            whileHover={{ y: -5 }}
+            className="bg-slate-900/50 backdrop-blur-md p-6 rounded-2xl border border-slate-800/50 flex flex-col items-center justify-center text-center group hover:border-indigo-500/30 transition-colors"
+          >
+            <div className="p-3 bg-indigo-500/10 rounded-xl text-indigo-400 mb-3 group-hover:scale-110 transition-transform">
+              <MousePointerClick size={24} />
+            </div>
+            <h3 className="text-slate-400 font-medium mb-1">Total Clicks</h3>
+            <p className="text-3xl font-bold text-white">{stats?.totalClicks || 0}</p>
+          </motion.div>
+
+          <motion.div 
+            whileHover={{ y: -5 }}
+            className="bg-slate-900/50 backdrop-blur-md p-6 rounded-2xl border border-slate-800/50 flex flex-col items-center justify-center text-center group hover:border-emerald-500/30 transition-colors"
+          >
+            <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-400 mb-3 group-hover:scale-110 transition-transform">
+              <TrendingUp size={24} />
+            </div>
+            <h3 className="text-slate-400 font-medium mb-1">Top Performing</h3>
+            <p className="text-2xl font-bold text-white truncate max-w-[200px]">
+              {stats?.topLinkAlias !== "N/A" ? `/${stats.topLinkAlias}` : "None"}
+            </p>
+            <p className="text-xs text-slate-500 mt-1">{stats?.topLinkClicks || 0} clicks</p>
+          </motion.div>
+
+          <motion.div 
+            whileHover={{ y: -5 }}
+            className="bg-slate-900/50 backdrop-blur-md p-6 rounded-2xl border border-slate-800/50 flex flex-col items-center justify-center text-center group hover:border-purple-500/30 transition-colors"
+          >
+            <div className="p-3 bg-purple-500/10 rounded-xl text-purple-400 mb-3 group-hover:scale-110 transition-transform">
+              <Link2 size={24} />
+            </div>
+            <h3 className="text-slate-400 font-medium mb-1">Active Links</h3>
+            <p className="text-3xl font-bold text-white">{stats?.totalLinks || 0}</p>
+          </motion.div>
         </motion.div>
 
         <motion.div

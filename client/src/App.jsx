@@ -14,39 +14,44 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [history, setHistory] = useState([]);
+  
+  const [stats, setStats] = useState({
+    totalClicks: 0,
+    totalLinks: 0,
+    topLinkAlias: "N/A",
+    topLinkClicks: 0
+  });
 
-  // 1. Get the Token from Context
   const { user, token } = useContext(AuthContext);
 
-  // 2. Fetch Links (Auto-Authenticates via Headers usually, or we add it)
   useEffect(() => {
-    const fetchLinks = async () => {
+    const fetchData = async () => {
       if (user && token) {
         try {
-          // Note: If your axios is not globally configured, we need headers here too usually.
-          // But for now, let's assume getMyLinks works because it's a GET request
-          // likely handled by global headers or simple cookie logic if you used cookies.
-          // If GET works, we leave it. If GET fails, we add headers here too.
-          const res = await axios.get("http://localhost:5000/api/urls/my-links", {
-            headers: { Authorization: `Bearer ${token}` } // <--- Added Header just in case
-          });
-          setHistory(res.data);
+          const config = { headers: { Authorization: `Bearer ${token}` } };
+          
+          const linksRes = await axios.get("http://localhost:5000/api/urls/my-links", config);
+          setHistory(linksRes.data);
+
+          const statsRes = await axios.get("http://localhost:5000/api/urls/stats", config);
+          setStats(statsRes.data);
+
         } catch (err) {
-          console.error("Failed to fetch links");
+          console.error("Failed to fetch data");
         }
       } else {
         setHistory([]);
+        setStats({ totalClicks: 0, totalLinks: 0, topLinkAlias: "N/A", topLinkClicks: 0 });
       }
     };
 
-    fetchLinks();
+    fetchData();
   }, [user, token]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!url) return toast.error("Please paste a link first!");
 
-    // Basic Validation
     let formattedUrl = url.trim();
     if (!/^https?:\/\//i.test(formattedUrl)) {
        formattedUrl = 'https://' + formattedUrl;
@@ -59,8 +64,6 @@ function App() {
 
     setLoading(true);
     try {
-      // 3. Create Link (Needs Header if protected, or public if not)
-      // We will add the header just to be safe if the user is logged in
       const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
       
       const res = await axios.post('http://localhost:5000/api/urls/shorten', { 
@@ -69,6 +72,9 @@ function App() {
       }, config);
       
       setHistory((prev) => [res.data, ...prev]);
+      
+      setStats(prev => ({ ...prev, totalLinks: prev.totalLinks + 1 }));
+
       setUrl("");
       setCustomAlias("");
       toast.success("Link shortened successfully!");
@@ -80,31 +86,23 @@ function App() {
     }
   };
 
-  // 4. DELETE LINK (The Fix)
   const handleDelete = async (id) => {
     if(!id) return;
     if(!confirm("Are you sure you want to delete this link?")) return;
 
-    // --- DEBUGGING ---
-    console.log("Deleting ID:", id);
-    console.log("Using Token:", token); 
-    // If token is null in console, you need to Login again!
-
     try {
-      // THE FIX: We explicitly send the token here 👇
       await axios.delete(`http://localhost:5000/api/urls/${id}`, {
-        headers: {
-            Authorization: `Bearer ${token}` 
-        }
+        headers: { Authorization: `Bearer ${token}` }
       });
 
-      // Remove from UI
       setHistory((prev) => prev.filter((link) => link._id !== id));
+      
+      setStats(prev => ({ ...prev, totalLinks: prev.totalLinks - 1 }));
+      
       toast.success("Link deleted!");
 
     } catch (err) {
       console.error("Delete Error:", err);
-      // Show the exact reason from the server
       toast.error(err.response?.data?.message || "Failed to delete link");
     }
   };
@@ -140,6 +138,7 @@ function App() {
         history={history}
         handleDelete={handleDelete}
         clearHistory={clearHistory}
+        stats={stats} 
       />
 
       <Footer />

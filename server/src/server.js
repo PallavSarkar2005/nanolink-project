@@ -17,10 +17,11 @@ const PORT = process.env.PORT || 5000;
 app.use(helmet());
 app.use(morgan("dev"));
 app.use(express.json());
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
-    methods: ["GET", "POST", "DELETE"], 
+    origin: "*",
+    methods: ["GET", "POST", "DELETE"],
     credentials: true,
   })
 );
@@ -50,8 +51,6 @@ connectDB();
 app.use("/api/auth", authRouter);
 app.use("/api/urls", urlRouter);
 app.use("/", indexRouter);
-
-
 
 app.listen(PORT, () => {
   console.log(`🚀 Server is running on port ${PORT}`);

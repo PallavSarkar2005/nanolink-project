@@ -1,32 +1,36 @@
-import { nanoid } from 'nanoid';
-import validUrl from 'valid-url';
-import Url from '../models/Url.js';
+import { nanoid } from "nanoid";
+import validUrl from "valid-url";
+import Url from "../models/Url.js";
 
 export const shortenUrl = async (req, res) => {
   let { longUrl, customAlias } = req.body;
   const baseUrl = process.env.BASE_URL || "http://localhost:5000";
 
   if (!longUrl) return res.status(400).json({ message: "No URL provided" });
-  
+
   longUrl = longUrl.trim();
   if (!validUrl.isUri(longUrl)) {
     return res.status(400).json({ message: "Invalid URL format" });
   }
 
   if (longUrl.includes(baseUrl) || longUrl.includes("localhost:5000")) {
-    return res.status(400).json({ message: "Cannot shorten a link from this domain." });
+    return res
+      .status(400)
+      .json({ message: "Cannot shorten a link from this domain." });
   }
 
   let urlCode;
 
   if (customAlias) {
     customAlias = customAlias.trim().replace(/ /g, "-");
-    
+
     const existingAlias = await Url.findOne({ urlCode: customAlias });
     if (existingAlias) {
-      return res.status(400).json({ message: "Alias is already taken! Try another." });
+      return res
+        .status(400)
+        .json({ message: "Alias is already taken! Try another." });
     }
-    
+
     urlCode = customAlias;
   } else {
     urlCode = nanoid(8);
@@ -40,12 +44,11 @@ export const shortenUrl = async (req, res) => {
       shortUrl,
       urlCode,
       user: req.user ? req.user.id : null,
-      date: new Date()
+      date: new Date(),
     });
 
     await url.save();
     res.json(url);
-
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server Error" });
@@ -65,39 +68,27 @@ export const getMyLinks = async (req, res) => {
 export const deleteUrl = async (req, res) => {
   try {
     const linkId = req.params.id;
-    const userId = req.user.id; // From Auth Middleware
-
-    console.log(`🗑️ Attempting to delete Link ID: ${linkId}`);
-    console.log(`👤 Requested by User ID: ${userId}`);
+    const userId = req.user.id;
 
     const url = await Url.findById(linkId);
 
     if (!url) {
-      console.log("❌ Error: Link not found in Database");
       return res.status(404).json({ message: "URL not found" });
     }
 
-    // Safety Check: Does this link even have an owner?
     if (!url.user) {
-      console.log("❌ Error: This is a Guest Link (Cannot delete)");
       return res.status(401).json({ message: "Cannot delete public links" });
     }
 
-    console.log(`🔗 Link Owner ID: ${url.user.toString()}`);
-
-    // Check ownership
     if (url.user.toString() !== userId) {
-      console.log("❌ Error: User IDs do not match! (Unauthorized)");
       return res.status(401).json({ message: "Not authorized to delete this" });
     }
 
     await url.deleteOne();
-    console.log("✅ Success: Link Deleted");
     res.json({ message: "URL removed" });
-    
   } catch (err) {
-    console.error("💥 SERVER CRASH:", err.message);
-    res.status(500).json({ message: "Server Error: " + err.message });
+    console.error(err);
+    res.status(500).json({ message: "Server Error" });
   }
 };
 
@@ -113,6 +104,29 @@ export const redirectUrl = async (req, res) => {
     } else {
       return res.status(404).json({ message: "No URL found" });
     }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
+export const getDashboardStats = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const urls = await Url.find({ user: userId });
+
+    const totalClicks = urls.reduce((sum, url) => sum + url.clicks, 0);
+    const totalLinks = urls.length;
+
+    const sortedLinks = [...urls].sort((a, b) => b.clicks - a.clicks);
+    const topLink = sortedLinks.length > 0 ? sortedLinks[0] : null;
+
+    res.json({
+      totalClicks,
+      totalLinks,
+      topLinkAlias: topLink ? topLink.urlCode : "None",
+      topLinkClicks: topLink ? topLink.clicks : 0,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server Error" });
