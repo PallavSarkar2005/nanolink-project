@@ -23,6 +23,16 @@ function App() {
   });
 
   const { user, token, logout } = useContext(AuthContext);
+  const API_URL = import.meta.env.VITE_API_URL;
+
+  useEffect(() => {
+    const path = window.location.pathname;
+    if (path && path !== "/" && path !== "/index.html") {
+      const shortId = path.replace("/", "");
+      const backendRoot = API_URL.replace("/api", "");
+      window.location.href = `${backendRoot}/${shortId}`;
+    }
+  }, [API_URL]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -30,10 +40,10 @@ function App() {
         try {
           const config = { headers: { Authorization: `Bearer ${token}` } };
           
-          const linksRes = await axios.get("https://nanolink-api.onrender.com/api/urls/my-links", config);
+          const linksRes = await axios.get(`${API_URL}/urls/my-links`, config);
           setHistory(linksRes.data);
 
-          const statsRes = await axios.get("https://nanolink-api.onrender.com/api/urls/stats", config);
+          const statsRes = await axios.get(`${API_URL}/urls/stats`, config);
           setStats(statsRes.data);
 
         } catch (err) {
@@ -49,7 +59,7 @@ function App() {
     };
 
     fetchData();
-  }, [user, token, logout]);
+  }, [user, token, logout, API_URL]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -60,22 +70,21 @@ function App() {
        formattedUrl = 'https://' + formattedUrl;
     }
     try {
-        new URL(formattedUrl);
+       new URL(formattedUrl);
     } catch (err) {
-        return toast.error("Invalid URL. Please check spelling.");
+       return toast.error("Invalid URL. Please check spelling.");
     }
 
     setLoading(true);
     try {
       const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
       
-      const res = await axios.post('https://nanolink-api.onrender.com/api/urls/shorten', { 
+      const res = await axios.post(`${API_URL}/urls/shorten`, { 
         longUrl: formattedUrl,
         customAlias: customAlias 
-      }, config);
+      }, config, { timeout: 10000 });
       
       setHistory((prev) => [res.data, ...prev]);
-      
       setStats(prev => ({ ...prev, totalLinks: prev.totalLinks + 1 }));
 
       setUrl("");
@@ -99,14 +108,12 @@ function App() {
     if(!confirm("Are you sure you want to delete this link?")) return;
 
     try {
-      await axios.delete(`https://nanolink-api.onrender.com/api/urls/${id}`, {
+      await axios.delete(`${API_URL}/urls/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
       setHistory((prev) => prev.filter((link) => link._id !== id));
-      
       setStats(prev => ({ ...prev, totalLinks: prev.totalLinks - 1 }));
-      
       toast.success("Link deleted!");
 
     } catch (err) {
@@ -114,7 +121,6 @@ function App() {
         toast.error("Session expired.");
         if (logout) logout();
       } else {
-        console.error("Delete Error:", err);
         toast.error(err.response?.data?.message || "Failed to delete link");
       }
     }
@@ -138,9 +144,7 @@ function App() {
           },
         }}
       />
-
       <Navbar onAuthClick={() => setShowAuthModal(true)} />
-      
       <MainContent
         url={url}
         setUrl={setUrl}
@@ -153,7 +157,6 @@ function App() {
         clearHistory={clearHistory}
         stats={stats} 
       />
-
       <Footer />
       <AuthModal
         isOpen={showAuthModal}

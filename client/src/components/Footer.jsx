@@ -1,9 +1,9 @@
 import React from "react";
-import { Github, Twitter, Linkedin, Link2, Heart } from "lucide-react";
+import { Github, Twitter, Linkedin, Link2 } from "lucide-react";
 
 const Footer = () => {
   return (
-    <footer className="w-full bg-slate-950 border-t border-slate-800/50 pt-16 pb-8 relative z-10">
+    <footer id="contact-footer" className="w-full bg-slate-950 border-t border-slate-800/50 pt-16 pb-8 relative z-10">
       <div className="max-w-7xl mx-auto px-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
           <div className="space-y-4">
@@ -19,19 +19,25 @@ const Footer = () => {
             </p>
             <div className="flex gap-4">
               <a
-                href="#"
+                href="https://github.com/PallavSarkar2005"
+                target="_blank"
+                rel="noreferrer"
                 className="text-slate-400 hover:text-white transition-colors"
               >
                 <Github className="w-5 h-5" />
               </a>
               <a
-                href="#"
+                href="https://twitter.com/Pallav_Sarkar_"
+                target="_blank"
+                rel="noreferrer"
                 className="text-slate-400 hover:text-white transition-colors"
               >
                 <Twitter className="w-5 h-5" />
               </a>
               <a
-                href="#"
+                href="https://linkedin.com/in/pallavsarkar2005"
+                target="_blank"
+                rel="noreferrer"
                 className="text-slate-400 hover:text-white transition-colors"
               >
                 <Linkedin className="w-5 h-5" />
@@ -132,7 +138,7 @@ const Footer = () => {
           <p className="flex items-center gap-1 text-slate-500 text-sm">
             Designed & Built by
             <a
-              href="https://github.com/pallav"
+              href="https://github.com/PallavSarkar2005"
               target="_blank"
               rel="noreferrer"
               className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors flex items-center gap-1"

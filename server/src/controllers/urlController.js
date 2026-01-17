@@ -13,7 +13,7 @@ export const shortenUrl = async (req, res) => {
     return res.status(400).json({ message: "Invalid URL format" });
   }
 
-  if (longUrl.includes(baseUrl) || longUrl.includes("localhost:5000")) {
+  if (longUrl.includes(baseUrl) || longUrl.includes("localhost")) {
     return res
       .status(400)
       .json({ message: "Cannot shorten a link from this domain." });

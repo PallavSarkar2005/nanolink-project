@@ -1,9 +1,66 @@
 import React, { useState } from 'react';
 import { Check, Zap, Shield, Crown } from 'lucide-react';
 import { motion } from 'framer-motion';
+import axios from 'axios';
+import toast from 'react-hot-toast';
 
 const Pricing = () => {
   const [isYearly, setIsYearly] = useState(false);
+  const [loading, setLoading] = useState(false);
+  
+  const API_URL = import.meta.env.VITE_API_URL;
+  const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID;
+
+  const handlePayment = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return toast.error("Please login to upgrade");
+
+    setLoading(true);
+    try {
+      const { data: order } = await axios.post(
+        `${API_URL}/payment/create-order`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const options = {
+        key: RAZORPAY_KEY,
+        amount: order.amount,
+        currency: "INR",
+        name: "NanoLink",
+        description: "Pro Plan Subscription",
+        order_id: order.id,
+        handler: async function (response) {
+          try {
+            const verifyRes = await axios.post(
+              `${API_URL}/payment/verify-payment`,
+              {
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (verifyRes.data.success) {
+              toast.success("Upgrade Successful! Welcome to Pro 💎");
+              setTimeout(() => window.location.reload(), 2000);
+            }
+          } catch (error) {
+            toast.error("Payment verification failed");
+          }
+        },
+        theme: { color: "#6366f1" },
+      };
+
+      const rzp1 = new window.Razorpay(options);
+      rzp1.open();
+    } catch (error) {
+      toast.error("Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const plans = [
     {
@@ -18,7 +75,7 @@ const Pricing = () => {
     {
       name: "Pro",
       icon: <Shield className="text-indigo-400" />,
-      price: isYearly ? "12" : "15",
+      price: isYearly ? "399" : "499",
       desc: "For serious creators",
       features: ["Unlimited links", "Advanced Analytics", "Lifetime history", "Priority support", "Custom aliases"],
       button: "Get Started",
@@ -27,7 +84,7 @@ const Pricing = () => {
     {
       name: "Enterprise",
       icon: <Crown className="text-amber-400" />,
-      price: "49",
+      price: "4999",
       desc: "Scale your business",
       features: ["Team collaboration", "API Access", "Custom domains", "Dedicated manager", "White-label links"],
       button: "Contact Sales",
@@ -85,7 +142,7 @@ const Pricing = () => {
             <p className="text-slate-500 text-sm mb-6">{plan.desc}</p>
             
             <div className="mb-8">
-              <span className="text-4xl font-bold text-white">${plan.price}</span>
+              <span className="text-4xl font-bold text-white">₹{plan.price}</span>
               <span className="text-slate-500 ml-2">/ month</span>
             </div>
 
@@ -98,12 +155,16 @@ const Pricing = () => {
               ))}
             </ul>
 
-            <button className={`w-full py-4 rounded-xl font-bold transition-all ${
-              plan.featured 
-                ? 'bg-indigo-600 text-white hover:bg-indigo-500 shadow-lg shadow-indigo-500/20' 
-                : 'bg-slate-800 text-white hover:bg-slate-700'
-            }`}>
-              {plan.button}
+            <button 
+              onClick={plan.name === "Pro" ? handlePayment : undefined}
+              disabled={plan.name === "Pro" && loading}
+              className={`w-full py-4 rounded-xl font-bold transition-all ${
+                plan.featured 
+                  ? 'bg-indigo-600 text-white hover:bg-indigo-500 shadow-lg shadow-indigo-500/20' 
+                  : 'bg-slate-800 text-white hover:bg-slate-700'
+              } ${loading && plan.name === "Pro" ? "opacity-75 cursor-wait" : ""}`}
+            >
+              {plan.name === "Pro" && loading ? "Processing..." : plan.button}
             </button>
           </motion.div>
         ))}

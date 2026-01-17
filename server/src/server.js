@@ -6,8 +6,9 @@ import helmet from "helmet";
 import morgan from "morgan";
 import { rateLimit } from "express-rate-limit";
 import urlRouter from "./routes/urlRoutes.js";
-import indexRouter from "./routes/index.js";
 import authRouter from "./routes/authRoutes.js";
+import paymentRouter from "./routes/paymentRoutes.js";
+import { redirectUrl } from "./controllers/urlController.js";
 
 dotenv.config();
 
@@ -21,7 +22,7 @@ app.use(express.json());
 app.use(
   cors({
     origin: "*",
-    methods: ["GET", "POST", "DELETE"],
+    methods: ["GET", "POST", "DELETE", "OPTIONS"],
     credentials: true,
   })
 );
@@ -31,7 +32,6 @@ const limiter = rateLimit({
   limit: 100,
   standardHeaders: "draft-7",
   legacyHeaders: false,
-  message: "Too many requests, please try again later.",
 });
 
 app.use("/api", limiter);
@@ -50,7 +50,13 @@ connectDB();
 
 app.use("/api/auth", authRouter);
 app.use("/api/urls", urlRouter);
-app.use("/", indexRouter);
+app.use("/api/payment", paymentRouter);
+
+app.get("/:code", redirectUrl);
+
+app.get("/", (req, res) => {
+  res.send("NanoLink Backend is Live 🚀");
+});
 
 app.listen(PORT, () => {
   console.log(`🚀 Server is running on port ${PORT}`);
